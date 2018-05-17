@@ -854,7 +854,8 @@ begin
 		user_name, co.cart = user_list.new_user_connection
 	end
 
-	if user_name !="" then
+
+	if user_name !="" and log_out!= "YES" then
 		begin
 			list_prod= get_list_prod
 			menu_sel= menu
@@ -864,10 +865,20 @@ begin
 					#begin
 					#	print("\n \t Purchase items: \t")
 					#	num_prod=gets().chomp.to_i
-					#end while !list_prod.check_availab(prod,num_prod)
+					#	if co.cart.has_key?(prod) then
+					#		act_qty=co.cart[prod] + num_prod
+					#	else
+					#		act_qty=num_prod
+					#	end
+					#end while !list_prod.check_availab(prod,act_qty)
 					#co.update_cart(prod, num_prod, "FALSE")
 					begin
-						if list_prod.check_availab(prod,1) then
+						if co.cart.has_key?(prod) then
+							act_qty=co.cart[prod] + 1
+						else
+							act_qty=1
+						end
+						if list_prod.check_availab(prod,act_qty) then
 							co.scan(prod)
 						end
 						cont_ans = question "Do you want to continue scanning products? (YES/NO)", ["YES", "NO"]
@@ -914,7 +925,7 @@ begin
 		end while menu_sel!="EXIT" 
 	end 
 
-end while user_list.user_list.keys.count!=0
+end while log_out!="YES"
 
 puts("\n\n\n\n\n")
 puts("".center(WINDOW_WIDTH,"-"))
