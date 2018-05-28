@@ -14,14 +14,6 @@
 #			question: el valor introducido por teclado
 #		remarks
 #			repetirá la pregunta hasta que el valor introducido por teclado sea uno de los de la lista recibida 
-#	question_upcase: este método es para las preguntas generales con valores delimitados sensibles de mayúsculas-minúsculas
-#		parameters
-#			message: mensaje de pregunta a mostrar en pantalla
-#			list: listado de valores posibles
-#		return
-#			question: el valor introducido por teclado
-#		remarks
-#			repetirá la pregunta hasta que el valor introducido por teclado sea uno de los de la lista recibida, teniendo en cuenta las mayúsculas y minúsculas
 #	name_verif: este método es para validar que el nombre del nuevo usuario no está ya registrado ni sea nulo
 #		parameters
 #			message: mensaje de pregunta a mostrar en pantalla
@@ -76,32 +68,11 @@ module General_functions
 		return question
 	end
 
-	def question_upcase (message, list)
-		error=false
-		begin
-			puts ()
-			puts("**********************".center(WINDOW_WIDTH))
-			puts message.center(WINDOW_WIDTH)
-			puts ("#{list}".center(WINDOW_WIDTH))
-			puts("**********************".center(WINDOW_WIDTH))
-			question=gets().chomp
-			if !list.include?(question)
-				error=true
-				puts
-				puts ("Option not valid.")
-				puts
-			else
-				error=false
-			end
-		end while error
-		return question
-	end
-
 	def name_verif (message, message1, list)
 		error=false
 		begin
 			print (message)
-			user_name= gets().chomp
+			user_name= gets().chomp.upcase
 			if list.include?(user_name) == true or user_name==""
 				puts ("\t\t" + message1)
 				error=true
@@ -188,6 +159,8 @@ end
 #		remarks
 #			crea el nuevo listado de usuarios
 #	new_user_connection: este método es el que se encarga de preguntar si se accede como usuario registrado o se da de alta uno nuevo
+#		parameters
+#			user_name: recibe el nombre del usuario activo 
 #		return
 #			user_name: nombre de usuario activo
 #			user_list[user_name].cart: carro de compra del usuario activo
@@ -216,6 +189,8 @@ end
 #		remarks
 #			en caso de salir, pregunta si se quiere acceder con otro usuario
 #	users_registered: este método es el que lista los usuarios registrados
+#		parameters
+#			user_name: recibe el nombre del usuario activo
 #		return
 #			user_name: nombre de usuario activo
 #			user_list[user_name].cart: carro de compra del usuario activo
@@ -252,6 +227,11 @@ end
 #			user_name: recibe el nombre del usuario activo para devolver el carro
 #		return
 #			@user_list[user_name].cart: carro de compra del usuario conectado
+#	delete_cart : este método es el que borra el contenido del carro del usuario conectado
+#		parameters
+#			user_name: recibe el nombre del usuario activo`para vaciar el carro
+#		return
+#			@user_list[user_name].cart: carro de compra del usuario conectado
 #remarks
 #	Se ha creado este listado de usuarios registrados para mostrar la posibilidad de manejo simultáneo de información de diferentes usuarios mediante el acceso a los parámetros del usuario en activo
 #	No se debería mostrar la lista de usuarios registrados, pero se hace en esta fase para facilitar el manejo del programa.
@@ -271,13 +251,17 @@ class Users_registered
 		@user_list=Hash.new()
 	end
 
-	def new_user_connection ()
+	def new_user_connection (user_name)
 		puts("---USER CONNECTION--- ")
-		new_user = question "Are you a new user or an already existing one? (NEW/OLD)", ["NEW", "OLD"]
+		if user_name ==""
+			new_user = question "Are you a new user or an already existing one? (NEW/OLD)", ["NEW", "OLD"]
+		else
+			new_user = question "Are you a new user or an already existing one?Or select CANCEL (NEW/OLD)", ["NEW", "OLD","CANCEL"]
+		end
 		if new_user == "NEW"
 			user_name, cart = create_new_user()
-		else
-			user_name, cart = users_registered()
+		elsif new_user == "OLD"
+			user_name, cart = users_registered user_name
 		end
 		return user_name, @user_list[user_name].cart
 	end
@@ -311,26 +295,34 @@ class Users_registered
 			@user_list[user_name].cart.clear
 			user_name=""
 			cart=""
-		else
-			puts()
-			puts("---CHANGE USER--- ")
-			user_change = question "Do you want to change your login user to another one? (YES/NO)", ["YES", "NO"]
-			if user_change == "YES" or user_name=="" then
-				user_name, cart = new_user_connection
-				else
-					cart=@user_list[user_name].cart
-			end
 		end
 		return user_name, cart, log_out
 	end
 
-	def users_registered ()
-		user_name= question_upcase "Select username. Users actually declared are: #{@user_list.keys}", @user_list.keys
-		pass_check=check_pss(user_name)
-		if pass_check == true then
-			cart=@user_list[user_name].cart
+	def user_change (user_name)
+		puts()
+		puts("---CHANGE USER--- ")
+		user_change = question "Do you want to change your login user to another one? (YES/NO)", ["YES", "NO"]
+		if user_change == "YES" or user_name=="" then
+			user_name, cart = new_user_connection user_name
+			else
+				cart=@user_list[user_name].cart
+		end
+		return user_name, cart
+	end
+
+	def users_registered (user_name)
+		user_name= question "Select username or select NEW user. \nUsers actually declared are: #{@user_list.keys}", @user_list.keys.push("NEW")
+		case (user_name)
+		when "NEW"
+			user_name, cart = create_new_user()
 		else
-			user_name, cart=new_user_connection()
+			pass_check=check_pss(user_name)
+			if pass_check == true then
+				cart=@user_list[user_name].cart
+			else
+				user_name, cart=new_user_connection user_name
+			end
 		end
 		return user_name, cart
 	end
@@ -409,6 +401,11 @@ class Users_registered
 		return @user_list[user_name].cart
 	end
 
+	def delete_cart (user_name)
+		@user_list[user_name].cart.clear
+		return @user_list[user_name].cart
+	end
+
 end
 
 #sumary
@@ -435,6 +432,7 @@ end
 #		remarks:
 #			para el ejercicio se ha asignado a cada producto una cantidad por defecto de unidades a pedir al quedarse sin stock (order_units)
 #			cada vez que se crea un nuevo producto, se da de alta en el listado de productos disponibles
+#			la disponibilidad de unidades disminuye cuando se efectua el proceso de pago, no por la reserva en el carro. Al ir a hacer el pago se vuelve a comprobar la disponibilidad por si otro usuario las ha comprado en paralelo 
 #methods
 #	get_put_list_prod: este método es el que muestra los códigos y descripción de los productos disponibles
 #		return
@@ -758,9 +756,12 @@ def menu ()
 	puts ("------------------PAY------------------".center(WINDOW_WIDTH,"-"))
 	puts ("PAY for pay process")
 	puts
+	puts ("------------------CHANGE USER------------------".center(WINDOW_WIDTH,"-"))
+	puts ("USER for change user")
+	puts
 	puts ("------------------EXIT------------------".center(WINDOW_WIDTH,"-"))
 	puts ("EXIT for exit")
-	menu_sel = question "Select", ["SHOP", "CART", "PAY", "EXIT"]
+	menu_sel = question "Select", ["SHOP", "CART", "PAY", "USER", "EXIT"]
 	return menu_sel
 end
 
@@ -769,9 +770,10 @@ end
 #parameters
 #	cabify_prod: lista de productos disponibles
 #	prod_list_sel: lista de posibles productos a seleccionar
+#   delete: booleano para permitir llamar a borrar el contenido del carro
 #remarks
 #	se ha creado un menú dinámico en función de la lista de productos que muestre los códigos y descripciones dadas de alta
-def menu_sel_prod (cabify_prod, prod_list_sel)
+def menu_sel_prod (cabify_prod, prod_list_sel, delete)
 	puts
 	puts ("--------------SCAN PRODUCT--------------".center(WINDOW_WIDTH))
 	cabify_prod.each do |key, value| 
@@ -786,7 +788,11 @@ def menu_sel_prod (cabify_prod, prod_list_sel)
 			end
 		end
 	end
-	prod = question "Select", prod_list_sel
+	if delete== true then
+		prod = question "Select product, Delete content or Cancel", prod_list_sel.push("DELETE", "CANCEL")
+	else
+		prod = question "Select product or Cancel", prod_list_sel.push("CANCEL")
+	end
 	return prod
 end
 
@@ -828,12 +834,12 @@ WINDOW_WIDTH = 80
 Cabify_products.list_prod
 
 voucher=Product.new("VOUCHER", "Cabify Voucher", 5.00, 100, ["special_2_for_1", "", ""])
-t_shirt=Product.new("T-SHIRT", "Cabify T-shirt", 20.00, 100, ["bulk_discount", "3", "19.00"])
+t_shirt=Product.new("TSHIRT", "Cabify T-shirt", 20.00, 100, ["bulk_discount", "3", "19.00"])
 mug=Product.new("MUG", "Cabify Mug", 7.50, 100, ["", "", ""])
 
 
 user_list=Users_registered.new()
-user_list.include_user_list "Monica", "monizumarraga@hotmail.com", "1234"
+user_list.include_user_list "MONICA", "monizumarraga@hotmail.com", "1234"
 user_start=true
 user_name=""
 log_out="NO"
@@ -845,14 +851,13 @@ puts()
 puts("CABIFY SHOP".center(WINDOW_WIDTH, "*"))
 puts()
 
+user_name, co.cart = user_list.new_user_connection ""
+
 begin
 	if user_start!=true
 		user_name, co.cart, log_out = user_list.user_connection_logout(user_name)
 	end
 	user_start=false
-	if log_out == "NO"  and user_name==""
-		user_name, co.cart = user_list.new_user_connection
-	end
 
 
 	if user_name !="" and log_out!= "YES" then
@@ -861,7 +866,7 @@ begin
 			menu_sel= menu
 			case (menu_sel)
 				when "SHOP"
-					prod= menu_sel_prod list_prod, list_prod.keys
+					prod= menu_sel_prod list_prod, list_prod.keys, false
 					#begin
 					#	print("\n \t Purchase items: \t")
 					#	num_prod=gets().chomp.to_i
@@ -872,53 +877,79 @@ begin
 					#	end
 					#end while !list_prod.check_availab(prod,act_qty)
 					#co.update_cart(prod, num_prod, "FALSE")
-					begin
-						if co.cart.has_key?(prod) then
-							act_qty=co.cart[prod] + 1
-						else
-							act_qty=1
-						end
-						if list_prod.check_availab(prod,act_qty) then
-							co.scan(prod)
-						end
-						cont_ans = question "Do you want to continue scanning products? (YES/NO)", ["YES", "NO"]
-						if cont_ans=="YES"	then
-							prod= menu_sel_prod list_prod, list_prod.keys
-						end
-					end while cont_ans	=="YES"
-				when "PAY"
-					pay_proc= co.calc_tot_price()
-					if pay_proc == true then
-						price=co.total
-						pay_avail = user_list.pay user_name	, price
-						if pay_avail == true then
-							prod_avail=co.order_avail(co.cart)
-							if prod_avail == true then
-								co.order_checkout(co.cart)
-								user_list.pay_action user_name	, price
+					case (prod)
+					when "CANCEL"
+					else
+						begin
+							if co.cart.has_key?(prod) then
+								act_qty=co.cart[prod] + 1
+							else
+								act_qty=1
 							end
-						else
-							puts ("Review your cart, there are some articles out of stock")
-							co.view_cart()
-						end
+							if list_prod.check_availab(prod,act_qty) then
+								co.scan(prod)
+							end
+							cont_ans = question "Do you want to continue scanning products? (YES/NO)", ["YES", "NO"]
+							if cont_ans=="YES"	then
+								prod= menu_sel_prod list_prod, list_prod.keys, false
+							end
+						end while cont_ans	=="YES"
 					end
-					puts("".center(WINDOW_WIDTH,"-"))
-					puts ("Enter to continue".center(WINDOW_WIDTH))
-					aa=gets
+				when "PAY"
+					if co.cart.length == 0
+						puts("There are no articles in your cart".center(WINDOW_WIDTH,"-"))
+						puts ("Enter to continue".center(WINDOW_WIDTH))
+						aa=gets
+					else
+						pay_proc= co.calc_tot_price()
+						if pay_proc == true then
+							price=co.total
+							pay_avail = user_list.pay user_name	, price
+							if pay_avail == true then
+								prod_avail=co.order_avail(co.cart)
+								if prod_avail == true then
+									conf_ans = question "Are you sure you want to continue with the purchase order? (YES/NO)", ["YES", "NO"]
+									if conf_ans=="YES"	then
+										co.order_checkout(co.cart)
+										user_list.pay_action user_name	, price
+									end
+								end
+							else
+								puts ("Review your cart, there are some articles out of stock")
+								co.view_cart()
+							end
+						end
+						puts("".center(WINDOW_WIDTH,"-"))
+						puts ("Enter to continue".center(WINDOW_WIDTH))
+						aa=gets
+					end
 				when "CART"
 					begin
 						co.view_cart()
-						cart_acc = question "Do you want to modify the Cart content? (YES/NO)", ["YES", "NO"]
-						if cart_acc == "YES" then
-							list_prod= get_list_prod
-							prod= menu_sel_prod list_prod, co.get_cart_list
-							begin
-								print("\n \t New quantity: \t")
-								num_prod=gets().chomp.to_i
-							end while !list_prod.check_availab(prod,num_prod)
-							co.update_cart(prod, num_prod, "TRUE")
+						if co.cart.length == 0
+							cart_acc = question "There are no items in your cart. Select CANCEL and go back to the shop", ["CANCEL"]
+							prod="NO"
+						else
+							cart_acc = question "Do you want to modify the Cart content? (YES/NO)", ["YES", "NO"]
+							if cart_acc == "YES" then
+								list_prod= get_list_prod
+								prod= menu_sel_prod list_prod, co.get_cart_list, true
+								case (prod)
+								when "CANCEL"
+								when "DELETE"
+									co.cart=user_list.delete_cart(user_name)
+								else
+									begin
+										print("\n \t New quantity: \t")
+										num_prod=gets().chomp.to_i
+									end while !list_prod.check_availab(prod,num_prod)
+									co.update_cart(prod, num_prod, "TRUE")
+								end
+							end
 						end
-					end while cart_acc=="YES" 
+					end while cart_acc=="YES" and prod!="DELETE" and prod!="CANCEL"
+				when "USER"
+					user_name, co.cart = user_list.user_change user_name
 				when "EXIT"
 				else
 			end
